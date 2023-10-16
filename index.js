@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId} = require("mongodb");
 
 const app = express();
 
@@ -28,9 +28,44 @@ async function run() {
 
         const coffeeCollection = client.db("coffeeStoreDB").collection("coffee");
 
+        app.get("/coffees", async (req, res) => {
+            const cursor = coffeeCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
         app.post("/add-coffee", async (req, res) => {
             const coffee = req.body;
             const  result = await coffeeCollection.insertOne(coffee);
+            res.send(result);
+        });
+
+        app.delete("/coffee/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = {_id: new ObjectId(id)};
+            const result = await coffeeCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        app.get("/coffee/:id", async (req, res) => {
+            const id = req.params.id;
+            const query = {_id: new ObjectId(id)};
+            const result = await coffeeCollection.findOne(query);
+            res.send(result);
+        });
+
+        app.put("/modify-coffee/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)};
+            const option = {upsert: true};
+            const coffee = req.body;
+            const { coffeeName, chef, supplier, taste, category, details, photo } = coffee;
+            const updatedCoffee = {
+                $set: {
+                    coffeeName, chef, supplier, taste, category, details, photo
+                }
+            };
+            const result = await coffeeCollection.updateOne(filter, updatedCoffee, option);
             res.send(result);
         });
 
@@ -45,7 +80,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-    res.send("hello backend");
+    res.send("hello backend!");
 });
 
 app.listen(port, () => {
